@@ -33,8 +33,9 @@ stages:
             inputs:
               command: 'custom'
               customCommandAndArgs: 'config fix'
-              artifactoryConnection: $(JfrogArtifactoryConnection)  # Artifactory connection
-              sourceRepo: 'eai-uac-npm-virtual' # Replace with your Artifactory npm repo
+              artifactoryConnection: '$(JfrogArtifactoryConnection)'
+              sourceRepo: 'eai-uac-npm-virtual'
+              workingFolder: 'api-catalog/'
             condition: succeeded()
 
           # Step 3: Install npm dependencies from JFrog Artifactory
