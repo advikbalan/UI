@@ -4,11 +4,11 @@ const path = require('path');
 const app = express();
 
 // Serve the static files from the `dist` directory
-app.use(express.static(path.join(__dirname, 'dist/api-catalog')));
+app.use(express.static(path.join(__dirname, 'dist/angular-project1/browser')));
 
 // Redirect all other routes to `index.html`
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist/api-catalog/index.html'));
+  res.sendFile(path.join(__dirname, 'dist/angular-project1/browser/index.html'));
 });
 
 // Start the server on port 8080 or the port provided in environment variables
