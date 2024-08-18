@@ -43,8 +43,9 @@ stages:
             displayName: 'Install npm dependencies (Artifactory)'
             inputs:
               command: 'install'
-              artifactoryConnection: $(JfrogArtifactoryConnection)  # Artifactory connection
-              sourceRepo: 'eai-uac-npm-virtual' # Replace with your Artifactory npm repo
+              artifactoryConnection: '$(JfrogArtifactoryConnection)'
+              sourceRepo: 'eai-uac-npm-virtual'
+              workingFolder: 'api-catalog/'
             condition: succeeded()
 
 
