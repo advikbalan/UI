@@ -50,14 +50,15 @@ stages:
 
 
 
-#          - script: |
-#              npm run lint
-#            displayName: 'Run lint'
+          - script: |
+              npm run lint
+            displayName: 'Run lint'
+            continueOnError: true
 
-#          - script: |
-#              npm run test
-#            displayName: 'Run unit tests'
-#            continueOnError: true
+          - script: |
+              npm run test
+            displayName: 'Run unit tests'
+            continueOnError: true
 #            timeoutInMinutes: 5  # Adjust as needed
 
           - script: |
@@ -66,26 +67,26 @@ stages:
             displayName: 'Run build'
 
           
-#          - task: SonarQubePrepare@6
-#            displayName: 'Prepare SonarQube for analysis'
-#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
-#            inputs:
-#              SonarQube: 'SonarQube PROD'
-#              scannerMode: 'CLI'
-#              configMode: 'file'
-#              extraProperties: |
-#                projectKey=$(sonarqube-project-key)
-#                sonar.projectKey=$(sonarqube-project-key)
-            
-#          - task: SonarQubeAnalyze@6
-#            displayName: 'Run SonarQube Analysis'
-#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+          - task: SonarQubePrepare@6
+            displayName: 'Prepare SonarQube for analysis'
+            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+            inputs:
+              SonarQube: 'sonarqube'
+              scannerMode: 'CLI'
+              configMode: 'file'
+              extraProperties: |
+                projectKey=$(sonarqube-project-key)
+                sonar.projectKey=$(sonarqube-project-key)
+              
+          - task: SonarQubeAnalyze@6
+            displayName: 'Run SonarQube Analysis'
+            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
 
-#          - task: SonarQubePublish@6
-#            displayName: 'Publish SonarQube Results'
-#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
-#            inputs:
-#              pollingTimeoutSec: "300"
+          - task: SonarQubePublish@6
+            displayName: 'Publish SonarQube Results'
+            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+            inputs:
+              pollingTimeoutSec: "300"
 
           - publish: $(System.DefaultWorkingDirectory)/api-catalog
             artifact: '$(image-name)-Artifact'
