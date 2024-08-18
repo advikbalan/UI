@@ -87,7 +87,7 @@ stages:
 #            inputs:
 #              pollingTimeoutSec: "300"
 
-          - publish: $(System.DefaultWorkingDirectory)
+          - publish: $(System.DefaultWorkingDirectory)/api-catalog
             artifact: '$(image-name)-Artifact'
             displayName: 'Publish artifact'
 
