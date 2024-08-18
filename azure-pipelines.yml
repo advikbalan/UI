@@ -61,6 +61,7 @@ stages:
 #            timeoutInMinutes: 5  # Adjust as needed
 
           - script: |
+              cd api-catalog
               npm run build
             displayName: 'Run build'
 
