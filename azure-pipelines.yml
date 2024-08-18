@@ -1,0 +1,169 @@
+# Define triggers to automatically start the pipeline based on branch and path changes
+trigger:
+  batch: true  # Combine multiple changes into a single pipeline run
+  branches:
+    include:
+      - none  # Trigger pipeline only for changes in the master branch
+
+
+# Define the variable group to centralize variable management
+variables:
+  - group: 'Humana-API-Temp'  # Replace with the name of your variable group
+
+# Stage 1: Application Build
+stages:
+  - stage: AppBuild
+    displayName: 'Building the application'
+    pool:
+      vmImage: 'ubuntu-latest'
+    jobs:
+      - job: buildApp
+        workspace:
+          clean: all  # Cleans the workspace before the job starts
+        steps:
+          
+          - task: NodeTool@0
+            displayName: 'Use Node.js $(nodejsVersion)'
+            inputs:
+              versionSpec: '$(nodejsVersion)'
+            
+            # Step 2: Fix npm configuration to work with JFrog Artifactory
+          - task: JFrogNpm@1
+            displayName: 'Fix npm config (Artifactory)'
+            inputs:
+              command: 'custom'
+              customCommandAndArgs: 'config fix'
+              artifactoryConnection: $(JfrogArtifactoryConnection)  # Artifactory connection
+              sourceRepo: 'eai-uac-npm-virtual' # Replace with your Artifactory npm repo
+            condition: succeeded()
+
+          # Step 3: Install npm dependencies from JFrog Artifactory
+          - task: JFrogNpm@1
+            displayName: 'Install npm dependencies (Artifactory)'
+            inputs:
+              command: 'install'
+              artifactoryConnection: $(JfrogArtifactoryConnection)  # Artifactory connection
+              sourceRepo: 'eai-uac-npm-virtual' # Replace with your Artifactory npm repo
+            condition: succeeded()
+
+
+
+#          - script: |
+#              npm run lint
+#            displayName: 'Run lint'
+
+#          - script: |
+#              npm run test
+#            displayName: 'Run unit tests'
+#            continueOnError: true
+#            timeoutInMinutes: 5  # Adjust as needed
+
+          - script: |
+              npm run build
+            displayName: 'Run build'
+
+          
+#          - task: SonarQubePrepare@6
+#            displayName: 'Prepare SonarQube for analysis'
+#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+#            inputs:
+#              SonarQube: 'SonarQube PROD'
+#              scannerMode: 'CLI'
+#              configMode: 'file'
+#              extraProperties: |
+#                projectKey=$(sonarqube-project-key)
+#                sonar.projectKey=$(sonarqube-project-key)
+            
+#          - task: SonarQubeAnalyze@6
+#            displayName: 'Run SonarQube Analysis'
+#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+
+#          - task: SonarQubePublish@6
+#            displayName: 'Publish SonarQube Results'
+#            condition: and(succeeded(), eq(variables['sonarqubeAnalysis'], true))
+#            inputs:
+#              pollingTimeoutSec: "300"
+
+          - publish: $(System.DefaultWorkingDirectory)
+            artifact: '$(image-name)-Artifact'
+            displayName: 'Publish artifact'
+
+  - stage: BuildAndPublishToJfrog
+#    condition: and(in(dependencies.StaticScan.result, 'Succeeded', 'Skipped'),in(dependencies.DynamicScan.result, 'Succeeded', 'Skipped'), succeeded('AppBuild'), ne(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.Reason'], 'Schedule'))
+    displayName: 'Build and Push docker image'
+    pool:
+      vmImage: 'ubuntu-latest'
+    jobs:
+      - job: Publish
+        steps: 
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              source: current
+              artifact: '$(image-name)-artifact'
+              path: $(System.DefaultWorkingDirectory)/dist
+          - task: Docker@2
+            inputs:
+              command: login
+              containerRegistry: $(DockerArtifactoryConnection)
+            displayName: Login to humana-dha-dhp-docker-artifacts Registry
+          - task: Docker@2
+            inputs:
+              command: login
+              containerRegistry: $(DockerArtifactoryConnectionVirtual)
+            displayName: Login to humana-dha-docker-virtual Registry
+          - task: Docker@2
+            inputs:
+              command: login
+              containerRegistry: $(DockerArtifactoryConnectionMcrVirtual)
+            displayName: Login to humana-dha-microsoft-remote Registry
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'JfrogDocerkSC'
+              repository: 'eai-uac-docker-local/$(image-name)'
+              command: 'buildAndPush'
+              Dockerfile: 'Dockerfile'
+              tags: '$(Build.BuildNumber)'
+            displayName: Build and push docker image
+  
+
+  # - stage: HelmBuildandPublishToJfrog
+  #   displayName: 'Build and Push Helm charts'
+  #   pool:
+  #     vmImage: 'ubuntu-latest'
+  #   jobs:
+  #     - job: PackagingandPushingHelmChart
+  #       steps:
+  #         - task: HelmInstaller@1
+  #           displayName: Install Helm 3.8.2
+  #           inputs:
+  #             helmVersionToInstall: '3.8.2'
+  #             checkLatestHelmVersion: false
+          
+  #         - script: |
+  #             ls -R /home/vsts/work/1/s
+  #           displayName: 'List files in the workspace'
+          
+  #         - task: PowerShell@2
+  #           displayName: 'Replace Build Number in values.yaml'
+  #           inputs:
+  #             targetType: 'inline'
+  #             script: |
+  #               (Get-Content ./Infra/values.yaml) -replace '\$\(Build\.BuildNumber\)', '$(Build.BuildNumber)' | Set-Content ./Infra/values.yaml
+
+  #         - script: |
+  #             cat ./Infra/values.yaml
+  #           displayName: 'Verify values.yaml'
+
+
+  #         - task: HelmDeploy@0
+  #           displayName: Helm package
+  #           inputs:
+  #             command: 'package'
+  #             chartPath: './Infra'
+  #             chartVersion: '$(Build.BuildNumber)'
+
+  #         - task: CmdLine@2
+  #           inputs:
+  #             script: |
+  #               helm registry login $(jfrog_artifactory) --username $(artifact-user) --password $(artifact-password)
+  #                 helm push $(Build.ArtifactStagingDirectory)/humana-ui-$(Build.BuildNumber).tgz oci://$(jfrog_artifactory)/$(image-name) --debug
