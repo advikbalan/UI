@@ -64,7 +64,7 @@ jobs:
       - name: Build Docker Image with Git SHA
         run: |
           IMAGE_TAG=${{ github.sha }}
-          docker build -t pkhostingltd.jfrog.io/eai-docker-virtual/api-catalog:${IMAGE_TAG} -f ./api-catalog/Dockerfile .
+          docker build -t pkhostingltd.jfrog.io/eai-docker-virtual/api-catalog:${IMAGE_TAG} -f ./Dockerfile .
 
       # Step 4: Push Docker Image to JFrog Artifactory with Git SHA tag
       - name: Push Docker Image with Git SHA tag
