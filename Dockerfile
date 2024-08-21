@@ -1,11 +1,29 @@
-# Base image: Use a lightweight Node.js image
-FROM node:lts-alpine
+# Stage 1: Build the Angular application
+FROM node:20 AS build-stage
 
-COPY dist /app
+# Set working directory inside the container
 WORKDIR /app
 
-# Expose the port that the app will run on
-EXPOSE 8080
-  
-# Start the Node.js server
-CMD ["node", "server.js"]
+# Copy the package.json and package-lock.json files
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm install
+
+# Copy the rest of the application's source code to the container
+COPY . .
+
+# Build the Angular app in production mode
+RUN npm run build
+
+# Stage 2: Serve the Angular application with NGINX
+FROM nginx:alpine AS production-stage
+
+# Copy the build output from the previous stage to the NGINX www directory
+COPY --from=build-stage /app/dist/your-angular-app-name /usr/share/nginx/html
+
+# Expose port 80 to the outside world
+EXPOSE 80
+
+# Start NGINX server
+CMD ["nginx", "-g", "daemon off;"]
